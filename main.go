@@ -1,9 +1,10 @@
 package main
 
 import (
-    "log"
+	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"syscall"
 	"todolist/config"
@@ -11,11 +12,13 @@ import (
 	"todolist/repositories"
 	"todolist/services"
 
-    "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
+
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
 func main() {
@@ -24,9 +27,15 @@ func main() {
 
 	app := fiber.New()
 
-	app.Use(cors.New())    
-	app.Use(logger.New())  
-	app.Use(recover.New()) 
+	app.Use(cors.New())
+	app.Use(logger.New())
+	app.Use(recover.New())
+
+	app.Use(limiter.New(limiter.Config{
+		Max:          100,
+		Expiration:   25 * time.Second,
+		KeyGenerator: func(c *fiber.Ctx) string { return c.IP() },
+	}))
 
 	todoRepo := repositories.NewTodoRepository(config.MongoDatabase)
 	todoService := services.NewTodoService(todoRepo)
@@ -39,7 +48,7 @@ func main() {
 	api.Get("/:id", todoHandler.GetTodoByID)
 	api.Put("/:id", todoHandler.UpdateTodo)
 	api.Delete("/:id", todoHandler.DeleteTodo)
-	api.Patch("/:id/toggle", todoHandler.ToggleTodoComplete) 
+	api.Patch("/:id/toggle", todoHandler.ToggleTodoComplete)
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -54,11 +63,11 @@ func main() {
 	go func() {
 		_ = <-c
 		log.Println("Shutting down server...")
-		_ = app.Shutdown() 
+		_ = app.Shutdown()
 	}()
 
-	port := "3000" 
-	
+	port := "3000"
+
 	log.Printf("Server is starting on port %s", port)
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
