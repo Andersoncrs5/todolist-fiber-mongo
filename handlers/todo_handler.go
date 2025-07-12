@@ -11,7 +11,12 @@ import (
 )
 
 type TodoHandler interface {
-	
+	ToggleTodoComplete(c *fiber.Ctx) error
+	DeleteTodo(c *fiber.Ctx) error
+	UpdateTodo(c *fiber.Ctx) error
+	GetTodoByID(c *fiber.Ctx) error
+	GetAllTodos(c *fiber.Ctx) error
+	CreateTodo(c *fiber.Ctx) error
 }
 
 type todoHandler struct {
